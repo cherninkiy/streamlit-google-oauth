@@ -29,8 +29,8 @@ def get_gdrive_file_list(folder_id):
             #     "../../service-account.json", SCOPES)
             # creds = flow.run_local_server(port=9080)
 
-        with open("token.pickle", "wb") as token:
-            pickle.dump(creds, token)
+        # with open("token.pickle", "wb") as token:
+        #     pickle.dump(creds, token)
 
     service = build("drive", "v3", credentials=creds)
 
@@ -57,9 +57,12 @@ def load_gdrive_file_data(file_id):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "../../service-account.json", SCOPES)
-            creds = flow.run_local_server(port=9080)
+            creds = service_account.Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"]
+            )
+            # flow = InstalledAppFlow.from_client_secrets_file(
+            #     "../../service-account.json", SCOPES)
+            # creds = flow.run_local_server(port=9080)
 
         # with open("token.pickle", "wb") as token:
         #     pickle.dump(creds, token)
