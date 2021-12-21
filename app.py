@@ -14,9 +14,9 @@ SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 def get_gdrive_file_list(folder_id):
     creds = None
-    if os.path.exists("token.pickle"):
-        with open("token.pickle", "rb") as token:
-            creds = pickle.load(token)
+    # if os.path.exists("token.pickle"):
+    #     with open("token.pickle", "rb") as token:
+    #         creds = pickle.load(token)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -49,9 +49,9 @@ def get_gdrive_file_list(folder_id):
 
 def load_gdrive_file_data(file_id):
     creds = None
-    if os.path.exists("token.pickle"):
-        with open("token.pickle", "rb") as token:
-            creds = pickle.load(token)
+    # if os.path.exists("token.pickle"):
+    #     with open("token.pickle", "rb") as token:
+    #         creds = pickle.load(token)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
