@@ -61,8 +61,8 @@ def load_gdrive_file_data(file_id):
                 "../../service-account.json", SCOPES)
             creds = flow.run_local_server(port=9080)
 
-        with open("token.pickle", "wb") as token:
-            pickle.dump(creds, token)
+        # with open("token.pickle", "wb") as token:
+        #     pickle.dump(creds, token)
 
     service = build("drive", "v3", credentials=creds)
 
