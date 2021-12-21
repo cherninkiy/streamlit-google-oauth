@@ -80,4 +80,4 @@ def load_gdrive_file_data(file_id):
 
     return None
 
-get_gdrive_file_list("12rmMvI9YfS1eF-KXmoftQjTxo4JigZgB")
+st.write(get_gdrive_file_list("12rmMvI9YfS1eF-KXmoftQjTxo4JigZgB"))
