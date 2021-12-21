@@ -1,4 +1,3 @@
 google_auth_oauthlib
 google_api_python_client
-streamlit==0.81.1
-httpx-oauth==0.3.5
+streamlit==1.3.0
