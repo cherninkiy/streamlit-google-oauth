@@ -1,90 +1,83 @@
+import os.path
+import pickle
+from io import BytesIO
 import streamlit as st
-import os
-import asyncio
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 
-from session_state import get
-from httpx_oauth.clients.google import GoogleOAuth2
+SCOPES = ["https://www.googleapis.com/auth/drive"]
 
+def get_gdrive_file_list(folder_id):
+    creds = None
+    if os.path.exists("token.pickle"):
+        with open("token.pickle", "rb") as token:
+            creds = pickle.load(token)
 
-async def write_authorization_url(client,
-                                  redirect_uri):
-    authorization_url = await client.get_authorization_url(
-        redirect_uri,
-        scope=["profile", "email"],
-        extras_params={"access_type": "offline"},
-    )
-    return authorization_url
-
-
-async def write_access_token(client,
-                             redirect_uri,
-                             code):
-    token = await client.get_access_token(code, redirect_uri)
-    return token
-
-
-async def get_email(client,
-                    token):
-    user_id, user_email = await client.get_id_email(token)
-    return user_id, user_email
-
-
-def main(user_id, user_email):
-    st.write(f"You're logged in as {user_email}")
-
-
-if __name__ == '__main__':
-    client_id = st.secrets['GOOGLE_CLIENT_ID']
-    client_secret = st.secrets['GOOGLE_CLIENT_SECRET']
-    redirect_uri = st.secrets['REDIRECT_URI']
-
-    client = GoogleOAuth2(client_id, client_secret)
-    authorization_url = asyncio.run(
-        write_authorization_url(client=client,
-                                redirect_uri=redirect_uri)
-    )
-
-    session_state = get(token=None)
-    if session_state.token is None:
-        try:
-            code = st.experimental_get_query_params()['code']
-        except:
-            st.write(f'''<h1>
-                Please login using this <a target="_self"
-                href="{authorization_url}">url</a></h1>''',
-                     unsafe_allow_html=True)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
         else:
-            # Verify token is correct:
-            try:
-                token = asyncio.run(
-                    write_access_token(client=client,
-                                       redirect_uri=redirect_uri,
-                                       code=code))
-            except:
-                st.write(f'''<h1>
-                    This account is not allowed or page was refreshed.
-                    Please try again: <a target="_self"
-                    href="{authorization_url}">url</a></h1>''',
-                         unsafe_allow_html=True)
-            else:
-                # Check if token has expired:
-                if token.is_expired():
-                    if token.is_expired():
-                        st.write(f'''<h1>
-                        Login session has ended,
-                        please <a target="_self" href="{authorization_url}">
-                        login</a> again.</h1>
-                        ''')
-                else:
-                    session_state.token = token
-                    user_id, user_email = asyncio.run(
-                        get_email(client=client,
-                                  token=token['access_token'])
-                    )
-                    session_state.user_id = user_id
-                    session_state.user_email = user_email
-                    main(user_id=session_state.user_id,
-                         user_email=session_state.user_email)
-    else:
-        main(user_id=session_state.user_id,
-             user_email=session_state.user_email)
+            creds = service_account.Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"]
+            )
+            # flow = InstalledAppFlow.from_client_secrets_file(
+            #     "../../service-account.json", SCOPES)
+            # creds = flow.run_local_server(port=9080)
+
+        with open("token.pickle", "wb") as token:
+            pickle.dump(creds, token)
+
+    service = build("drive", "v3", credentials=creds)
+
+    result = service.files() \
+        .list(
+            q=f'"{folder_id}" in parents',
+            pageSize=400,
+            fields="files(id, name)"
+        ) \
+        .execute()
+
+    files = result.get("files")
+
+    return files
+
+
+def load_gdrive_file_data(file_id):
+    creds = None
+    if os.path.exists("token.pickle"):
+        with open("token.pickle", "rb") as token:
+            creds = pickle.load(token)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "../../service-account.json", SCOPES)
+            creds = flow.run_local_server(port=9080)
+
+        with open("token.pickle", "wb") as token:
+            pickle.dump(creds, token)
+
+    service = build("drive", "v3", credentials=creds)
+
+    request = service.files().get_media(fileId=file_id)
+    buffer = BytesIO()
+    downloader = MediaIoBaseDownload(buffer, request)
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+        print("Download %d%%." % int(status.progress() * 100))
+
+    if done:
+        buffer.seek(0)
+        return buffer
+
+    return None
+
+get_gdrive_file_list("12rmMvI9YfS1eF-KXmoftQjTxo4JigZgB")
